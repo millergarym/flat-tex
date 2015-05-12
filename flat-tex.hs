@@ -5,13 +5,14 @@
 -- delete all comments ( % )
 -- and remove all \todo{ } etc. (see "known_commands" below)
 
--- compile:  cabal install, use: flat-tex main  (without .tex extension!)
+-- compile:  cabal install, use: flat-tex main  
 
 -- (C) J. Waldmann , License: GPL
 
 
 import Text.ParserCombinators.Parsec
 import System.Environment ( getArgs )
+import System.Directory
 
 main :: IO ()
 main = do
@@ -52,7 +53,11 @@ handle it = putStr $ emit it
 
 fhandle :: FilePath -> IO ()
 fhandle fname = do
-    p <- parseFromFile document $ fname ++ ".tex"
+    e <- doesFileExist fname
+    let actual_fname = case e of
+          True -> fname
+          False -> fname ++ ".tex"
+    p <- parseFromFile document actual_fname
     case p of
 	   Right doc -> handles doc
 	   Left e -> error $ show e
