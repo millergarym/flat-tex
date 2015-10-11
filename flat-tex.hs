@@ -25,6 +25,7 @@ data Item = Newline
 	  | Comment String
 	  | Command String Document -- ^ with exactly one argument, in braces
 	  | Group Document
+          | Verbatim String -- ^ special: keep % (it is not a comment)
           | Letter { unLetter :: Char }
 	  | Escaped Char
 	  
@@ -39,6 +40,7 @@ emit :: Item -> String
 emit Newline = "\n"
 emit (Comment _) = "%\n"
 emit (Command name doc) = "\\" ++ name ++ "{" ++ emits doc ++ "}"
+emit (Verbatim s) = "\\begin{verbatim}" ++ s ++ "\n\\end{verbatim}"
 emit (Group doc) = "{" ++ emits doc ++ "}"
 emit (Letter c) = [c]
 emit (Escaped c) = [ '\\', c]
@@ -57,7 +59,7 @@ fhandle fname = do
     let actual_fname = case e of
           True -> fname
           False -> fname ++ ".tex"
-    p <- parseFromFile document actual_fname
+    p <- parseFromFile (document <* eof) actual_fname
     case p of
 	   Right doc -> handles doc
 	   Left e -> error $ show e
@@ -76,6 +78,9 @@ item =   do newline
      <|> do char '%'
 	    cs <- anyChar `manyTill` newline
             return $ Comment cs
+     <|> do try (string "\\begin{verbatim}")
+            cs <- anyChar `manyTill` try (string "\\end{verbatim}")
+            return $ Verbatim cs
      <|> do char '\\'
 	    command known_commands
 	      <|> do c <- anyChar ; return $ Escaped c

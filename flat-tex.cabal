@@ -2,14 +2,15 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                flat-tex
-version:             0.2.0
+version:             0.3.0
 synopsis:            flatten a latex multi-file latex document (expand all \input)
+                     and remove all comments
 -- description:         
 homepage:            https://github.com/jwaldmann/flat-tex
 license:             GPL-2
 license-file:        LICENSE
 author:              Johannes Waldmann
-maintainer:          waldmann@imn.htwk-leipzig.de
+maintainer:          http://www.imn.htwk-leipzig.de/~waldmann/
 -- copyright:           
 category:            Text
 build-type:          Simple
