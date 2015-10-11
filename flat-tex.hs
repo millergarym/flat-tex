@@ -13,6 +13,7 @@
 import Text.ParserCombinators.Parsec
 import System.Environment ( getArgs )
 import System.Directory
+import Control.Monad (void)
 
 main :: IO ()
 main = do
@@ -76,7 +77,7 @@ item :: Parser Item
 item =   do newline
 	    return Newline
      <|> do char '%'
-	    cs <- anyChar `manyTill` newline
+	    cs <- anyChar `manyTill` (void newline <|> eof)
             return $ Comment cs
      <|> do try (string "\\begin{verbatim}")
             cs <- anyChar `manyTill` try (string "\\end{verbatim}")

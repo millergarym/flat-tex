@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                flat-tex
-version:             0.3.0
+version:             0.3.1
 synopsis:            flatten a latex multi-file latex document (expand all \input)
                      and remove all comments
 -- description:         
