@@ -18,7 +18,7 @@ import Control.Monad (void)
 main :: IO ()
 main = do
     fnames <- getArgs
-    mapM_ fhandle fnames
+    mapM_ (fhandle  ".tex") fnames
 
 type Document = [ Item ]
 
@@ -41,34 +41,35 @@ emit :: Item -> String
 emit Newline = "\n"
 emit (Comment _) = "%\n"
 emit (Command name doc) = "\\" ++ name ++ "{" ++ emits doc ++ "}"
-emit (Verbatim s) = "\\begin{verbatim}" ++ s ++ "\n\\end{verbatim}"
+emit (Verbatim s) = "\\begin{verbatim}" ++ s ++ "\\end{verbatim}"
 emit (Group doc) = "{" ++ emits doc ++ "}"
 emit (Letter c) = [c]
 emit (Escaped c) = [ '\\', c]
 
-handles :: Document -> IO ()
-handles its = mapM_ handle its
+handles :: FilePath -> Document -> IO ()
+handles top its = mapM_ (handle top) its
 
-handle :: Item -> IO ()
-handle (Command "input" doc) = fhandle $ map unLetter doc
-handle (Command _ _) = return ()
-handle it = putStr $ emit it
+handle :: FilePath -> Item -> IO ()
+handle top (Command "input" doc) = fhandle ".tex" $ map unLetter doc
+handle top (Command "bibliography" _) = fhandle ".bbl" top
+handle top (Command _ _) = return ()
+handle top it = putStr $ emit it
 
-fhandle :: FilePath -> IO ()
-fhandle fname = do
+fhandle :: String -> FilePath -> IO ()
+fhandle extension fname = do
     e <- doesFileExist fname
     let actual_fname = case e of
           True -> fname
-          False -> fname ++ ".tex"
+          False -> fname ++ extension
     p <- parseFromFile (document <* eof) actual_fname
     case p of
-	   Right doc -> handles doc
+	   Right doc -> handles fname doc
 	   Left e -> error $ show e
 
 ---------------------------------------------------------------------------
 
 known_commands :: [ String ]
-known_commands = [ "input", "todo", "reminder", "ignore", "done" ]
+known_commands = [ "input", "todo", "reminder", "ignore", "done", "bibliography" ]
 
 document :: Parser Document
 document = many item
