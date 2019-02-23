@@ -72,7 +72,19 @@ fhandle extension fname = do
     p <- parseFromFile (document <* eof) actual_fname
     case p of
            Right doc -> handles fname doc
-           Left e -> error $ show e
+           Left e -> do
+             s <- readFile actual_fname
+             let pos = errorPos e ; l = sourceLine pos ; c = sourceColumn pos
+                 (lpre, lthis : lpost) = splitAt l $ lines s
+                 (cpre, cthis : cpost) = splitAt c $ lthis
+                 underline = replicate c '.'
+                   <> replicate (length lthis - c) '^'
+                 context = 2
+             error $ unlines $ [ show e ] <>
+               ekat context lpre <> [ lthis, underline ] <> take context lpost
+               
+
+ekat k = reverse . take k . reverse
 
 ---------------------------------------------------------------------------
 
