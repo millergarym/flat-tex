@@ -74,7 +74,9 @@ fhandle extension fname = do
            Right doc -> handles fname doc
            Left e -> do
              s <- readFile actual_fname
-             let pos = errorPos e ; l = sourceLine pos ; c = sourceColumn pos
+             let pos = errorPos e
+                 l = sourceLine pos - 1
+                 c = sourceColumn pos - 1
                  (lpre, lthis : lpost) = splitAt l $ lines s
                  (cpre, cthis : cpost) = splitAt c $ lthis
                  underline = replicate c '.'
@@ -119,7 +121,7 @@ bracketed :: Parser Item
 bracketed = Bracketed <$> between ( char '[' ) ( char ']' ) document
 
 command :: [ String ] -> Parser Item
-command names = 
+command names = try $ 
   Command <$> ( choice $ map ( try . string ) names )
           <*> optionMaybe bracketed
           <*> braced
