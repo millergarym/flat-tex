@@ -95,8 +95,7 @@ item =   do newline
             cs <- anyChar `manyTill` try (string "\\end{verbatim}")
             return $ Verbatim cs
      <|> do char '\\'
-            command known_commands
-              <|> do c <- anyChar ; return $ Escaped c
+            command known_commands <|> Escaped <$> anyChar
      <|> do braced
      <|> do bracketed
      <|> do c <- satisfy ( \ c -> not $ elem c "}]" ) ; return $ Letter c
@@ -108,8 +107,8 @@ bracketed :: Parser Item
 bracketed = Bracketed <$> between ( char '[' ) ( char ']' ) document
 
 command :: [ String ] -> Parser Item
-command names = try $
-  Command <$> ( choice $ map ( string ) names )
+command names = 
+  Command <$> ( choice $ map ( try . string ) names )
           <*> optionMaybe bracketed
           <*> braced
 
