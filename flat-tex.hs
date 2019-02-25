@@ -80,10 +80,10 @@ fhandle extension fname = do
                  (lpre, lthis : lpost) = splitAt l $ lines s
                  (cpre, cthis : cpost) = splitAt c $ lthis
                  underline = replicate c '.'
-                   <> replicate (length lthis - c) '^'
+                   ++ replicate (length lthis - c) '^'
                  context = 2
-             error $ unlines $ [ show e ] <>
-               ekat context lpre <> [ lthis, underline ] <> take context lpost
+             error $ unlines $ [ show e ] ++
+               ekat context lpre ++ [ lthis, underline ] ++ take context lpost
                
 
 ekat k = reverse . take k . reverse
