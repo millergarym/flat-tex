@@ -6,7 +6,9 @@ recursively inline all \inputs ,
 delete all comments ( % )
 and remove all \todo{ } etc. (see "known_commands" below)
 
-compile:  cabal install, use: flat-tex main  
+compile:  cabal install,
+use: flat-tex main
+or: flat-tex --keep-bib main
 
 (C) J. Waldmann , License: GPL
 -}
@@ -20,8 +22,12 @@ import Control.Monad (void)
 
 main :: IO ()
 main = do
-    fnames <- getArgs
-    mapM_ (fhandle  ".tex") fnames
+    argv <- getArgs
+    case argv of
+      "--keep-bib" : fnames ->
+        mapM_ (fhandle Keep ".tex") fnames
+      fnames ->
+        mapM_ (fhandle Expand ".tex") fnames
 
 type Document = [ Item ]
 
@@ -53,25 +59,29 @@ emit (Bracketed doc) = "[" ++ emits doc ++ "]"
 emit (Letter c) = [c]
 emit (Escaped c) = [ '\\', c]
 
-handles :: FilePath -> Document -> IO ()
-handles top its = mapM_ (handle top) its
+handles :: Mode -> FilePath -> Document -> IO ()
+handles mode top its = mapM_ (handle mode top) its
 
-handle :: FilePath -> Item -> IO ()
-handle top (Command "input" Nothing (Braced doc)) = fhandle ".tex" $ map unLetter doc
-handle top (Command "inputt" Nothing (Braced doc)) = fhandle ".tex" $ map unLetter doc
-handle top (Command "bibliography" Nothing _) = fhandle ".bbl" top
-handle top (Command _ _ _) = return () -- ignore TODO, etc.
-handle top it = putStr $ emit it
+handle :: Mode -> FilePath -> Item -> IO ()
+handle mode top (Command "input" Nothing (Braced doc)) = fhandle mode ".tex" $ map unLetter doc
+handle mode top (Command "inputt" Nothing (Braced doc)) = fhandle mode ".tex" $ map unLetter doc
+handle mode top it @ (Command "bibliography" Nothing _) = case mode of
+  Expand -> fhandle Expand ".bbl" top
+  Keep -> putStr $ emit it
+handle mode top (Command _ _ _) = return () -- ignore TODO, etc.
+handle mode top it = putStr $ emit it
 
-fhandle :: String -> FilePath -> IO ()
-fhandle extension fname = do
+data Mode = Keep | Expand
+
+fhandle :: Mode -> String -> FilePath -> IO ()
+fhandle mode extension fname = do
     e <- doesFileExist fname
     let actual_fname = case e of
           True -> fname
           False -> fname ++ extension
     p <- parseFromFile (document <* eof) actual_fname
     case p of
-           Right doc -> handles fname doc
+           Right doc -> handles mode fname doc
            Left e -> do
              s <- readFile actual_fname
              let pos = errorPos e
@@ -129,4 +139,4 @@ command names = try $
 ----------------------------------
 
 test :: IO ()
-test = fhandle ".tex" "test"
+test = fhandle Expand ".tex" "test"
