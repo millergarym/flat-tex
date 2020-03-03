@@ -19,6 +19,7 @@ import Text.ParserCombinators.Parsec
 import System.Environment ( getArgs )
 import System.Directory
 import Control.Monad (void)
+import System.IO
 
 main :: IO ()
 main = do
@@ -46,7 +47,7 @@ data Item = Newline
 ---------------------------------------------------------------------------
 
 emits :: Document -> String
-emits its = do it <- its ; emit it
+emits = concatMap emit
 
 emit :: Item -> String
 emit Newline = "\n"
@@ -59,17 +60,33 @@ emit (Bracketed doc) = "[" ++ emits doc ++ "]"
 emit (Letter c) = [c]
 emit (Escaped c) = [ '\\', c]
 
-handles :: Mode -> FilePath -> Document -> IO ()
-handles mode top its = mapM_ (handle mode top) its
+isSpace (Letter ' ') = True
+isSpace _ = False
 
-handle :: Mode -> FilePath -> Item -> IO ()
-handle mode top (Command "input" Nothing (Braced doc)) = fhandle mode ".tex" $ map unLetter doc
-handle mode top (Command "inputt" Nothing (Braced doc)) = fhandle mode ".tex" $ map unLetter doc
-handle mode top it @ (Command "bibliography" Nothing _) = case mode of
-  Expand -> fhandle Expand ".bbl" top
-  Keep -> putStr $ emit it
-handle mode top (Command _ _ _) = return () -- ignore TODO, etc.
-handle mode top it = putStr $ emit it
+handles :: Mode -> FilePath -> Document -> IO ()
+handles mode top [] = return ()
+handles mode top (it:its) = case it of
+  (Command "input" Nothing (Braced doc)) -> do
+    fhandle mode ".tex" $ map unLetter doc
+    handles mode top its
+  (Command "inputt" Nothing (Braced doc)) -> do
+    fhandle mode ".tex" $ map unLetter doc
+    handles mode top its
+  (Command "bibliography" Nothing _) -> do
+    case mode of
+      Expand -> fhandle Expand ".bbl" top
+      Keep -> putStr $ emit it
+    handles mode top its
+  (Command _ _ _) -> do -- ignore TODO, etc.
+    case dropWhile isSpace its of
+      Newline : more ->do
+        putStr $ emit (Comment undefined)
+        handles mode top more
+      more -> do
+        handles mode top more
+  _ -> do
+    putStr $ emit it
+    handles mode top its
 
 data Mode = Keep | Expand
 

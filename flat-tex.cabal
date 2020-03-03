@@ -1,5 +1,5 @@
 name:                flat-tex
-version:             0.7.0
+version:             0.8.0
 synopsis: flatten a latex multi-file latex document and remove all comments
 description: flatten a latex multi-file latex document and remove all comments
 
