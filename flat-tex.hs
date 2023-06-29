@@ -39,6 +39,7 @@ data Item = Newline
           | Braced Document
           | Bracketed Document
           | Verbatim String -- ^ special: keep % (it is not a comment)
+          | Pagebreak
           | Letter { unLetter :: Char }
           | Escaped Char
           
@@ -51,10 +52,11 @@ emits = concatMap emit
 
 emit :: Item -> String
 emit Newline = "\n"
-emit (Comment _) = "%\n"
+emit (Comment cs) = "%" ++ cs ++ "\n"
 emit (Command name opt arg) = "\\" ++ name
   ++ (case opt of Nothing -> "" ; Just o -> emit o ) ++ emit arg
 emit (Verbatim s) = "\\begin{verbatim}" ++ s ++ "\\end{verbatim}"
+emit (Pagebreak) = "\\pagebreak{}\n"
 emit (Braced doc) = "{" ++ emits doc ++ "}"
 emit (Bracketed doc) = "[" ++ emits doc ++ "]"
 emit (Letter c) = [c]
@@ -66,6 +68,10 @@ isSpace _ = False
 handles :: Mode -> FilePath -> Document -> IO ()
 handles mode top [] = return ()
 handles mode top (it:its) = case it of
+  (Command "include" Nothing (Braced doc)) -> do
+    putStr $ emit (Pagebreak)
+    fhandle mode ".tex" $ map unLetter doc
+    handles mode top its
   (Command "input" Nothing (Braced doc)) -> do
     fhandle mode ".tex" $ map unLetter doc
     handles mode top its
@@ -119,7 +125,7 @@ ekat k = reverse . take k . reverse
 
 known_commands :: [ String ]
 known_commands =
-  [ "inputt", "input"  , "bibliography"
+  [ "include", "inputt", "input"  , "bibliography"
   , "todo", "reminder", "ignore", "done"
   ]
 
@@ -132,6 +138,9 @@ item =   do newline
      <|> do char '%'
             cs <- anyChar `manyTill` (void newline <|> eof)
             return $ Comment cs
+     <|> do try (string "\\begin{Verbatim}")
+            cs <- anyChar `manyTill` try (string "\\end{Verbatim}")
+            return $ Verbatim cs
      <|> do try (string "\\begin{verbatim}")
             cs <- anyChar `manyTill` try (string "\\end{verbatim}")
             return $ Verbatim cs
