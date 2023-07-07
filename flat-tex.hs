@@ -39,6 +39,8 @@ data Item = Newline
           | Braced Document
           | Bracketed Document
           | Verbatim String -- ^ special: keep % (it is not a comment)
+          | VerbatimCap String -- ^ special: keep % (it is not a comment)
+          | Verb String -- stop issues with non matching brackets
           | Pagebreak
           | Letter { unLetter :: Char }
           | Escaped Char
@@ -52,10 +54,12 @@ emits = concatMap emit
 
 emit :: Item -> String
 emit Newline = "\n"
-emit (Comment cs) = "%" ++ cs ++ "\n"
+emit (Comment cs) = "%"
 emit (Command name opt arg) = "\\" ++ name
   ++ (case opt of Nothing -> "" ; Just o -> emit o ) ++ emit arg
 emit (Verbatim s) = "\\begin{verbatim}" ++ s ++ "\\end{verbatim}"
+emit (VerbatimCap s) = "\\begin{Verbatim}" ++ s ++ "\\end{Verbatim}"
+emit (Verb s) = "\\verb|" ++ s ++ "|"
 emit (Pagebreak) = "\\pagebreak{}\n"
 emit (Braced doc) = "{" ++ emits doc ++ "}"
 emit (Bracketed doc) = "[" ++ emits doc ++ "]"
@@ -138,9 +142,12 @@ item =   do newline
      <|> do char '%'
             cs <- anyChar `manyTill` (void newline <|> eof)
             return $ Comment cs
+     <|> do try (string "\\verb|")
+            cs <- anyChar `manyTill` try (string "|")
+            return $ Verb cs
      <|> do try (string "\\begin{Verbatim}")
             cs <- anyChar `manyTill` try (string "\\end{Verbatim}")
-            return $ Verbatim cs
+            return $ VerbatimCap cs
      <|> do try (string "\\begin{verbatim}")
             cs <- anyChar `manyTill` try (string "\\end{verbatim}")
             return $ Verbatim cs
